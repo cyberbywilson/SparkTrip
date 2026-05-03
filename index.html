@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000814">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Spark Trips">
+  <title>Spark Trips</title>
+  <style>
+    :root {
+      --bg:          #000814;
+      --card:        rgba(0, 12, 35, 0.80);
+      --border:      rgba(30, 100, 200, 0.28);
+      --border-hi:   rgba(30, 100, 200, 0.60);
+      --accent:      #1565c0;
+      --accent-dark: #0d47a1;
+      --bright:      #3b9eff;
+      --text:        #e2f4ff;
+      --muted:       #5b8fb9;
+      --dim:         #3d6e99;
+      --green:       #22c55e;
+      --red:         #f07070;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 12% 4%,  rgba(13, 71, 161, 0.26) 0%, transparent 48%),
+        radial-gradient(ellipse at 88% 96%, rgba(3,  83, 164, 0.20) 0%, transparent 48%),
+        repeating-linear-gradient(0deg,  transparent, transparent 47px, rgba(14,58,140,0.07) 47px, rgba(14,58,140,0.07) 48px),
+        repeating-linear-gradient(90deg, transparent, transparent 47px, rgba(14,58,140,0.07) 47px, rgba(14,58,140,0.07) 48px);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: rgba(30,100,200,0.4); color: #fff; }
+
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding:
+        max(env(safe-area-inset-top), 1.5rem)
+        1rem
+        calc(env(safe-area-inset-bottom) + 2.5rem);
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    .header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
+    .logo-group  { display:flex; align-items:center; gap:12px; }
+    .logo-svg    { flex-shrink:0; filter:drop-shadow(0 0 10px rgba(59,158,255,0.55)); }
+    h1 {
+      font-size: 1.75rem; font-weight: 900; text-transform: uppercase;
+      letter-spacing: 0.07em; color: #fff;
+      text-shadow: 0 0 28px rgba(30,100,200,0.55); line-height: 1;
+    }
+    .subtitle { font-size:.58rem; color:var(--dim); text-transform:uppercase; letter-spacing:.18em; margin-top:4px; }
+    .btn-new-trip {
+      font-size:.7rem; color:var(--dim); background:transparent;
+      border:1px solid var(--border); padding:8px 12px; border-radius:10px;
+      cursor:pointer; white-space:nowrap; font-family:inherit; -webkit-appearance:none;
+    }
+    .btn-new-trip:active { opacity:.65; transform:scale(.95); }
+
+    /* ── Progress ───────────────────────────────── */
+    #progress-section {
+      background:var(--card); border:1px solid var(--border);
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      border-radius:16px; padding:16px; margin-bottom:20px; display:none;
+    }
+    .progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .progress-label  { font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.14em; }
+    #count           { font-size:1.4rem; font-weight:900; color:#fff; }
+    #count span      { font-size:.85rem; font-weight:400; color:var(--dim); }
+    .progress-track  { width:100%; height:7px; background:rgba(0,10,30,.9); border-radius:99px; overflow:hidden; }
+    #progress-fill {
+      height:100%; border-radius:99px;
+      background:linear-gradient(90deg,#0d47a1,#1565c0,#1976d2,#42a5f5);
+      box-shadow:0 0 10px rgba(30,100,200,.6),0 0 3px rgba(66,165,245,.9);
+      transition:width .65s cubic-bezier(.4,0,.2,1); width:0%;
+    }
+    #all-done { display:none; text-align:center; color:var(--green); font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.14em; margin-top:12px; }
+
+    /* ── Form ───────────────────────────────────── */
+    .form-card {
+      background:var(--card); border:1px solid var(--border);
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      border-radius:16px; padding:16px; margin-bottom:20px;
+      display:flex; flex-direction:column; gap:14px;
+    }
+    .field-label { display:block; font-size:.6rem; color:var(--dim); text-transform:uppercase; letter-spacing:.18em; font-weight:600; margin-bottom:8px; }
+
+    .input-row   { display:flex; gap:8px; }
+    #name-input  {
+      flex:1; background:rgba(0,8,25,.85); border:1px solid var(--border);
+      color:var(--text); border-radius:12px; padding:14px 16px; font-size:1rem;
+      font-family:inherit; outline:none; caret-color:var(--bright);
+      transition:border-color .2s,box-shadow .2s; -webkit-appearance:none;
+    }
+    #name-input::placeholder { color:rgba(91,143,185,.4); }
+    #name-input:focus { border-color:rgba(30,100,200,.7); box-shadow:0 0 0 3px rgba(30,100,200,.13); }
+
+    .btn-cam {
+      flex-shrink:0; width:52px;
+      background:rgba(0,8,25,.85); border:1px solid var(--border);
+      border-radius:12px; color:var(--muted); cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:all .2s; -webkit-appearance:none;
+    }
+    .btn-cam:active { border-color:var(--bright); color:var(--bright); box-shadow:0 0 12px rgba(30,100,200,.3); transform:scale(.95); }
+    .btn-cam svg    { width:22px; height:22px; }
+
+    .zone-picker { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .zone-btn {
+      display:flex; flex-direction:column; align-items:center; gap:5px;
+      padding:12px 4px; border-radius:12px; font-size:.6rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:.12em; cursor:pointer;
+      transition:all .18s; background:rgba(0,8,25,.55);
+      border:1px solid rgba(30,100,200,.2); color:var(--muted);
+      font-family:inherit; -webkit-appearance:none;
+    }
+    .zone-btn .ze { font-size:1.4rem; line-height:1; }
+    .zone-btn:active { transform:scale(.95); }
+    .zone-btn.active {
+      background:linear-gradient(135deg,rgba(13,71,161,.7),rgba(13,71,161,.45));
+      border-color:rgba(30,100,200,.75); color:var(--text);
+      box-shadow:0 0 14px rgba(30,100,200,.35);
+    }
+    #submit-btn {
+      width:100%; padding:15px; border-radius:12px; font-size:.88rem;
+      font-weight:700; font-family:inherit; cursor:pointer;
+      background:linear-gradient(135deg,#1565c0,#0d47a1);
+      border:1px solid rgba(30,100,200,.55);
+      box-shadow:0 4px 16px rgba(13,71,161,.45),inset 0 1px 0 rgba(255,255,255,.1);
+      color:var(--text); transition:all .2s; -webkit-appearance:none;
+    }
+    #submit-btn:active   { transform:scale(.97); }
+    #submit-btn:disabled { opacity:.35; transform:none; cursor:default; }
+
+    /* ── Empty ──────────────────────────────────── */
+    .empty-state { text-align:center; padding:70px 20px; }
+    .empty-icon  { font-size:3.2rem; opacity:.2; margin-bottom:12px; }
+    .empty-text  { color:var(--dim); font-size:.85rem; }
+
+    /* ── Zones ──────────────────────────────────── */
+    #zones { display:flex; flex-direction:column; gap:14px; }
+    .zone-section {
+      background:var(--card); border:1px solid var(--border);
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      border-radius:16px; overflow:hidden; animation:fadeIn .25s ease-out;
+    }
+    .zone-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid rgba(30,100,200,.11); }
+    .zone-title  { display:flex; align-items:center; gap:8px; font-size:.76rem; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:#cce4ff; }
+    .zone-badge  { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; padding:3px 9px; border-radius:99px; }
+    .bm { background:linear-gradient(135deg,rgba(13,71,161,.55),rgba(13,71,161,.25)); border:1px solid rgba(13,71,161,.65); color:#90caf9; }
+    .bt { background:linear-gradient(135deg,rgba(21,101,192,.55),rgba(21,101,192,.25)); border:1px solid rgba(21,101,192,.65); color:#bbdefb; }
+    .bd { background:linear-gradient(135deg,rgba(25,118,210,.55),rgba(25,118,210,.25)); border:1px solid rgba(25,118,210,.65); color:#e3f2fd; }
+
+    /* ── Package cards ──────────────────────────── */
+    .pkg-card {
+      display:flex; align-items:center; gap:12px; padding:15px 16px;
+      cursor:pointer; transition:background .15s,opacity .25s;
+      border-bottom:1px solid rgba(30,100,200,.09);
+    }
+    .pkg-card:last-child  { border-bottom:none; }
+    .pkg-card:active      { background:rgba(30,100,200,.06); }
+    .pkg-card.delivered   { opacity:.4; }
+    .pkg-check {
+      flex-shrink:0; width:24px; height:24px; border-radius:50%;
+      border:2px solid rgba(30,100,200,.45); display:flex; align-items:center;
+      justify-content:center; transition:all .22s;
+    }
+    .pkg-check.checked { background:var(--green); border-color:var(--green); box-shadow:0 0 10px rgba(34,197,94,.5); }
+    .pkg-check svg { width:12px; height:10px; }
+    .pkg-name { flex:1; font-size:1rem; font-weight:500; color:var(--text); transition:all .22s; }
+    .pkg-card.delivered .pkg-name { text-decoration:line-through; color:#2e5070; }
+    .pkg-del {
+      flex-shrink:0; width:32px; height:32px; display:flex; align-items:center;
+      justify-content:center; border:none; background:transparent; color:#2a4a68;
+      border-radius:8px; cursor:pointer; transition:color .18s,background .18s; -webkit-appearance:none;
+    }
+    .pkg-del:active { color:var(--red); background:rgba(240,112,112,.12); }
+    .pkg-del svg { width:16px; height:16px; }
+
+    /* ── Scan Modal ─────────────────────────────── */
+    #scan-modal {
+      display:none; position:fixed; inset:0; z-index:200;
+      background:rgba(0,5,15,.96); backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+      flex-direction:column; align-items:center; justify-content:center;
+      padding:max(env(safe-area-inset-top),24px) 24px max(env(safe-area-inset-bottom),24px);
+      animation:fadeIn .2s ease-out;
+    }
+    #scan-modal.open { display:flex; }
+
+    .scan-phase { display:flex; flex-direction:column; align-items:center; width:100%; }
+
+    .spinner {
+      width:48px; height:48px;
+      border:3px solid rgba(30,100,200,.2);
+      border-top-color:var(--bright);
+      border-radius:50%;
+      animation:spin .75s linear infinite;
+      margin-bottom:16px;
+    }
+    .scan-msg      { font-size:.88rem; color:var(--muted); text-align:center; }
+    .scan-title    { font-size:1.05rem; font-weight:800; color:var(--text); text-align:center; margin-bottom:6px; text-transform:uppercase; letter-spacing:.07em; }
+    .scan-hint     { font-size:.78rem; color:var(--muted); text-align:center; margin-bottom:28px; }
+    .scan-big-icon { font-size:2.6rem; margin-bottom:14px; }
+
+    .results-label { font-size:.6rem; color:var(--dim); text-transform:uppercase; letter-spacing:.18em; font-weight:600; margin-bottom:12px; }
+    .ocr-lines     { width:100%; max-width:380px; display:flex; flex-direction:column; gap:8px; margin-bottom:20px; max-height:52dvh; overflow-y:auto; }
+    .ocr-line {
+      background:rgba(0,12,35,.9); border:1px solid var(--border);
+      border-radius:12px; padding:14px 18px; font-size:1rem; font-weight:600;
+      color:var(--text); cursor:pointer; text-align:center;
+      transition:all .18s; width:100%; font-family:inherit; -webkit-appearance:none;
+    }
+    .ocr-line:active { background:rgba(30,100,200,.22); border-color:var(--border-hi); transform:scale(.98); }
+
+    .btn-retry {
+      font-size:.78rem; color:var(--muted); background:transparent; border:none;
+      padding:8px; cursor:pointer; font-family:inherit;
+      text-decoration:underline; -webkit-appearance:none; margin-bottom:10px;
+    }
+    .btn-cancel {
+      font-size:.78rem; color:var(--dim); background:transparent;
+      border:1px solid var(--border); border-radius:10px; padding:10px 28px;
+      cursor:pointer; font-family:inherit; -webkit-appearance:none;
+    }
+    .btn-cancel:active { opacity:.6; }
+
+    /* ── Animations ─────────────────────────────── */
+    @keyframes spin    { to { transform:rotate(360deg); } }
+    @keyframes fadeIn  { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+    ::-webkit-scrollbar       { width:3px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:rgba(30,100,200,.35); border-radius:2px; }
+  </style>
+</head>
+<body>
+<main>
+
+  <!-- Header -->
+  <div class="header-row">
+    <div class="logo-group">
+      <svg class="logo-svg" width="46" height="46" viewBox="0 0 46 46" fill="none">
+        <defs>
+          <filter id="glow"  x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="glow2" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <radialGradient id="af" cx="50%" cy="100%" r="80%"><stop offset="0%" stop-color="#0d2550"/><stop offset="100%" stop-color="#060e20"/></radialGradient>
+        </defs>
+        <g transform="translate(23,23)">
+          <g transform="rotate(0)">  <polygon points="0,-21 -8,-14 -5.5,-7.5 5.5,-7.5 8,-14" fill="url(#af)" stroke="#1a4a8a" stroke-width=".9"/><polygon points="0,-20 -4.5,-15 0,-12 4.5,-15" fill="#0a1830" stroke="#1a4a8a" stroke-width=".6"/><line x1="0" y1="-19.5" x2="0" y2="-10" stroke="#3b9eff" stroke-width="1" filter="url(#glow)" opacity=".9"/><line x1="-2.5" y1="-16" x2="-2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/><line x1="2.5" y1="-16" x2="2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/></g>
+          <g transform="rotate(60)"> <polygon points="0,-21 -8,-14 -5.5,-7.5 5.5,-7.5 8,-14" fill="url(#af)" stroke="#1a4a8a" stroke-width=".9"/><polygon points="0,-20 -4.5,-15 0,-12 4.5,-15" fill="#0a1830" stroke="#1a4a8a" stroke-width=".6"/><line x1="0" y1="-19.5" x2="0" y2="-10" stroke="#3b9eff" stroke-width="1" filter="url(#glow)" opacity=".9"/><line x1="-2.5" y1="-16" x2="-2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/><line x1="2.5" y1="-16" x2="2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/></g>
+          <g transform="rotate(120)"><polygon points="0,-21 -8,-14 -5.5,-7.5 5.5,-7.5 8,-14" fill="url(#af)" stroke="#1a4a8a" stroke-width=".9"/><polygon points="0,-20 -4.5,-15 0,-12 4.5,-15" fill="#0a1830" stroke="#1a4a8a" stroke-width=".6"/><line x1="0" y1="-19.5" x2="0" y2="-10" stroke="#3b9eff" stroke-width="1" filter="url(#glow)" opacity=".9"/><line x1="-2.5" y1="-16" x2="-2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/><line x1="2.5" y1="-16" x2="2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/></g>
+          <g transform="rotate(180)"><polygon points="0,-21 -8,-14 -5.5,-7.5 5.5,-7.5 8,-14" fill="url(#af)" stroke="#1a4a8a" stroke-width=".9"/><polygon points="0,-20 -4.5,-15 0,-12 4.5,-15" fill="#0a1830" stroke="#1a4a8a" stroke-width=".6"/><line x1="0" y1="-19.5" x2="0" y2="-10" stroke="#3b9eff" stroke-width="1" filter="url(#glow)" opacity=".9"/><line x1="-2.5" y1="-16" x2="-2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/><line x1="2.5" y1="-16" x2="2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/></g>
+          <g transform="rotate(240)"><polygon points="0,-21 -8,-14 -5.5,-7.5 5.5,-7.5 8,-14" fill="url(#af)" stroke="#1a4a8a" stroke-width=".9"/><polygon points="0,-20 -4.5,-15 0,-12 4.5,-15" fill="#0a1830" stroke="#1a4a8a" stroke-width=".6"/><line x1="0" y1="-19.5" x2="0" y2="-10" stroke="#3b9eff" stroke-width="1" filter="url(#glow)" opacity=".9"/><line x1="-2.5" y1="-16" x2="-2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/><line x1="2.5" y1="-16" x2="2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/></g>
+          <g transform="rotate(300)"><polygon points="0,-21 -8,-14 -5.5,-7.5 5.5,-7.5 8,-14" fill="url(#af)" stroke="#1a4a8a" stroke-width=".9"/><polygon points="0,-20 -4.5,-15 0,-12 4.5,-15" fill="#0a1830" stroke="#1a4a8a" stroke-width=".6"/><line x1="0" y1="-19.5" x2="0" y2="-10" stroke="#3b9eff" stroke-width="1" filter="url(#glow)" opacity=".9"/><line x1="-2.5" y1="-16" x2="-2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/><line x1="2.5" y1="-16" x2="2.5" y2="-11" stroke="#2277cc" stroke-width=".5" opacity=".6"/></g>
+          <circle r="7.5" fill="#060e20" stroke="#1a4a8a" stroke-width="1.8"/>
+          <circle r="7.5" fill="none" stroke="#3b9eff" stroke-width=".7" opacity=".65" filter="url(#glow2)"/>
+          <circle r="4" fill="#0a1830"/>
+        </g>
+      </svg>
+      <div>
+        <h1>Spark Trips</h1>
+        <p class="subtitle">Sistema de reparto</p>
+      </div>
+    </div>
+    <button class="btn-new-trip" onclick="clearTrip()">Nuevo viaje</button>
+  </div>
+
+  <!-- Progress -->
+  <div id="progress-section">
+    <div class="progress-header">
+      <span class="progress-label">Progreso</span>
+      <span id="count">0 <span>/ 0</span></span>
+    </div>
+    <div class="progress-track"><div id="progress-fill"></div></div>
+    <p id="all-done">✓ Todos los paquetes entregados</p>
+  </div>
+
+  <!-- Form -->
+  <form class="form-card" id="add-form" onsubmit="handleSubmit(event)">
+    <div>
+      <label class="field-label" for="name-input">Nombre del cliente</label>
+      <div class="input-row">
+        <input id="name-input" type="text" placeholder="Ej: María García"
+               autocomplete="off" autocorrect="off" spellcheck="false">
+        <!-- Botón cámara -->
+        <button type="button" class="btn-cam" onclick="startScan()" title="Escanear etiqueta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </button>
+      </div>
+      <!-- Input oculto que abre la cámara trasera del iPhone -->
+      <input type="file" id="cam-input" accept="image/*" capture="environment"
+             style="display:none" onchange="handleCapture(this)">
+    </div>
+    <div>
+      <label class="field-label">Ubicación en el coche</label>
+      <div class="zone-picker">
+        <button type="button" class="zone-btn active" data-zone="MALETERO"><span class="ze">📦</span>Maletero</button>
+        <button type="button" class="zone-btn" data-zone="TRASERO"><span class="ze">🪑</span>Trasero</button>
+        <button type="button" class="zone-btn" data-zone="DELANTERO"><span class="ze">💺</span>Delantero</button>
+      </div>
+    </div>
+    <button type="submit" id="submit-btn">+ Añadir paquete</button>
+  </form>
+
+  <!-- Zones -->
+  <div id="zones"></div>
+
+  <!-- Footer -->
+  <p style="text-align:center;margin-top:40px;font-size:.58rem;color:#2a4060;text-transform:uppercase;letter-spacing:.18em;font-weight:500;">
+    Desarrollado por Wilson
+  </p>
+
+</main>
+
+<!-- ── Scan Modal ──────────────────────────────────────────────────────── -->
+<div id="scan-modal">
+
+  <!-- Fase: procesando -->
+  <div id="phase-proc" class="scan-phase">
+    <div class="spinner"></div>
+    <p class="scan-msg">Leyendo la etiqueta...</p>
+  </div>
+
+  <!-- Fase: resultados -->
+  <div id="phase-res" class="scan-phase" style="display:none">
+    <p class="results-label">Toca el nombre del cliente</p>
+    <div class="ocr-lines" id="ocr-lines"></div>
+    <button class="btn-retry" onclick="retryCapture()">Volver a escanear</button>
+    <button class="btn-cancel" onclick="closeScan()">Cancelar</button>
+  </div>
+
+  <!-- Fase: error -->
+  <div id="phase-err" class="scan-phase" style="display:none">
+    <div class="scan-big-icon">🔍</div>
+    <p class="scan-title">No se pudo leer</p>
+    <p class="scan-hint">Acércate más al sticker y asegúrate de que haya buena luz</p>
+    <button class="btn-retry" onclick="retryCapture()" style="margin-bottom:12px">Intentar de nuevo</button>
+    <button class="btn-cancel" onclick="closeScan()">Cancelar</button>
+  </div>
+
+</div>
+
+<!-- Tesseract.js (OCR en el navegador, se carga desde internet la primera vez) -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<script>
+  /* ═══════════════════════════════════════════════
+     DATOS + ESTADO
+  ═══════════════════════════════════════════════ */
+  const ZONES = [
+    { key:'MALETERO',  label:'Maletero',         emoji:'📦', badge:'bm' },
+    { key:'TRASERO',   label:'Sillón Trasero',   emoji:'🪑', badge:'bt' },
+    { key:'DELANTERO', label:'Sillón Delantero', emoji:'💺', badge:'bd' },
+  ]
+  const KEY = 'sparktrips-v1'
+  let packages    = load()
+  let selectedZone = 'MALETERO'
+
+  function load()  { try { return JSON.parse(localStorage.getItem(KEY) || '[]') } catch { return [] } }
+  function save()  { localStorage.setItem(KEY, JSON.stringify(packages)) }
+  function uid()   { return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2) }
+  function esc(s)  { const d=document.createElement('div'); d.appendChild(document.createTextNode(s)); return d.innerHTML }
+
+  /* ═══════════════════════════════════════════════
+     RENDER
+  ═══════════════════════════════════════════════ */
+  function render() {
+    const total     = packages.length
+    const delivered = packages.filter(p => p.delivered).length
+    const pct       = total > 0 ? (delivered / total) * 100 : 0
+
+    document.getElementById('progress-section').style.display = total > 0 ? 'block' : 'none'
+    document.getElementById('count').innerHTML = `${delivered} <span>/ ${total}</span>`
+    document.getElementById('progress-fill').style.width = pct + '%'
+    document.getElementById('all-done').style.display = (total > 0 && delivered === total) ? 'block' : 'none'
+
+    const container = document.getElementById('zones')
+    if (total === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><p class="empty-text">Añade el primer paquete para empezar</p></div>`
+      return
+    }
+    container.innerHTML = ZONES.map(zone => {
+      const pkgs = packages.filter(p => p.zone === zone.key)
+      if (!pkgs.length) return ''
+      const done = pkgs.filter(p => p.delivered).length
+      return `
+        <div class="zone-section">
+          <div class="zone-header">
+            <div class="zone-title"><span>${zone.emoji}</span><span>${zone.label}</span></div>
+            <span class="zone-badge ${zone.badge}">${done}/${pkgs.length}</span>
+          </div>
+          ${pkgs.map(p => `
+            <div class="pkg-card ${p.delivered?'delivered':''}" onclick="toggle('${p.id}',${p.delivered})">
+              <div class="pkg-check ${p.delivered?'checked':''}">
+                ${p.delivered?`<svg viewBox="0 0 12 10" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5l3.5 3.5L11 1"/></svg>`:''}
+              </div>
+              <span class="pkg-name">${esc(p.name)}</span>
+              <button class="pkg-del" onclick="event.stopPropagation();del('${p.id}')" aria-label="Eliminar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          `).join('')}
+        </div>`
+    }).join('')
+  }
+
+  /* ═══════════════════════════════════════════════
+     ACCIONES
+  ═══════════════════════════════════════════════ */
+  function handleSubmit(e) {
+    e.preventDefault()
+    const input = document.getElementById('name-input')
+    const name  = input.value.trim()
+    if (!name) return
+    const btn = document.getElementById('submit-btn')
+    btn.disabled = true
+    packages.push({ id:uid(), name, zone:selectedZone, delivered:false, createdAt:Date.now() })
+    save(); render()
+    input.value = ''; btn.disabled = false; input.focus()
+  }
+
+  function toggle(id, current) {
+    packages = packages.map(p => p.id === id ? {...p, delivered:!current} : p)
+    save(); render()
+  }
+
+  function del(id) {
+    packages = packages.filter(p => p.id !== id)
+    save(); render()
+  }
+
+  function clearTrip() {
+    if (!confirm('¿Empezar nuevo viaje? Se borrarán todos los paquetes.')) return
+    packages = []; save(); render()
+  }
+
+  /* ═══════════════════════════════════════════════
+     ZONA PICKER
+  ═══════════════════════════════════════════════ */
+  document.querySelectorAll('.zone-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedZone = btn.dataset.zone
+      document.querySelectorAll('.zone-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+    })
+  })
+
+  /* ═══════════════════════════════════════════════
+     CÁMARA + OCR
+  ═══════════════════════════════════════════════ */
+  function startScan()   { document.getElementById('cam-input').click() }
+  function retryCapture(){ document.getElementById('cam-input').value = ''; document.getElementById('cam-input').click() }
+  function closeScan()   { document.getElementById('scan-modal').classList.remove('open') }
+
+  function showPhase(phase) {
+    document.getElementById('phase-proc').style.display = phase === 'proc' ? 'flex' : 'none'
+    document.getElementById('phase-res').style.display  = phase === 'res'  ? 'flex' : 'none'
+    document.getElementById('phase-err').style.display  = phase === 'err'  ? 'flex' : 'none'
+  }
+
+  async function handleCapture(input) {
+    if (!input.files || !input.files[0]) return
+    const file = input.files[0]
+    input.value = '' // permite escanear el mismo archivo de nuevo
+
+    showPhase('proc')
+    document.getElementById('scan-modal').classList.add('open')
+
+    try {
+      const img    = await loadImage(file)
+      const canvas = preprocessImage(img)
+      const { data: { text } } = await Tesseract.recognize(canvas, 'spa+eng')
+      const lines = extractLines(text)
+
+      if (lines.length > 0) showResults(lines)
+      else showPhase('err')
+    } catch (err) {
+      console.error(err)
+      showPhase('err')
+    }
+  }
+
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  function preprocessImage(img) {
+    // Escalar a máx 1400px para no sobrecargar el OCR
+    const MAX   = 1400
+    const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+    const w     = Math.round(img.width  * scale)
+    const h     = Math.round(img.height * scale)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = w; canvas.height = h
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0, w, h)
+
+    // Convertir a escala de grises y aumentar contraste
+    const id = ctx.getImageData(0, 0, w, h)
+    const d  = id.data
+    for (let i = 0; i < d.length; i += 4) {
+      const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114
+      const val  = Math.min(255, Math.max(0, (gray - 128) * 1.6 + 128))
+      d[i] = d[i+1] = d[i+2] = val
+    }
+    ctx.putImageData(id, 0, 0)
+    return canvas
+  }
+
+  function extractLines(raw) {
+    return raw
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => {
+        if (l.length < 3) return false
+        // Quedar solo líneas que tengan mayoría de letras (nombres, no códigos)
+        const letters = (l.match(/[a-zA-ZÀ-ÿ]/g) || []).length
+        return letters >= 3 && letters / l.length > 0.55
+      })
+      .map(l => l.replace(/[^a-zA-ZÀ-ÿ\s'\-\.]/g, ' ').replace(/\s+/g, ' ').trim())
+      .filter(l => l.length >= 3)
+      .filter((l, i, arr) => arr.indexOf(l) === i) // sin duplicados
+      .slice(0, 7)
+  }
+
+  function showResults(lines) {
+    const container = document.getElementById('ocr-lines')
+    container.innerHTML = ''
+    lines.forEach(line => {
+      const btn = document.createElement('button')
+      btn.className   = 'ocr-line'
+      btn.textContent = line
+      btn.addEventListener('click', () => {
+        document.getElementById('name-input').value = line
+        closeScan()
+        document.getElementById('name-input').focus()
+      })
+      container.appendChild(btn)
+    })
+    showPhase('res')
+  }
+
+  /* ═══════════════════════════════════════════════
+     INIT
+  ═══════════════════════════════════════════════ */
+  render()
+</script>
+</body>
+</html>
